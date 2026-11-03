@@ -1,0 +1,246 @@
+// IBM HR Analytics - 40 documented measures
+// Measure table: 'measures table'
+// Fact table: 'WA_Fn-UseC_-HR-Employee-Attrition'
+// Sample attrition is a snapshot proportion, not period turnover.
+// Monthly income is shown in dataset units; no currency is assumed.
+
+// 01 Workforce
+// Distinct sampled employees in the current filter context, including the selected attrition outcome when present.
+// Format: #,0
+Total Employees =
+    DISTINCTCOUNT('WA_Fn-UseC_-HR-Employee-Attrition'[EmployeeNumber])
+
+// 02 Attrition
+// Recorded leavers in the selected cohort. Ignores Attrition and Attrition Status filters; preserves other filters.
+// Format: #,0
+Employees Left =
+    COALESCE(CALCULATE([Total Employees], REMOVEFILTERS('WA_Fn-UseC_-HR-Employee-Attrition'[Attrition Status]), 'WA_Fn-UseC_-HR-Employee-Attrition'[Attrition] = "Yes"), 0)
+
+// 02 Attrition
+// Recorded stayers in the selected cohort. Ignores Attrition and Attrition Status filters; not dated active headcount.
+// Format: #,0
+Retained Employees =
+    COALESCE(CALCULATE([Total Employees], REMOVEFILTERS('WA_Fn-UseC_-HR-Employee-Attrition'[Attrition Status]), 'WA_Fn-UseC_-HR-Employee-Attrition'[Attrition] = "No"), 0)
+
+// 02 Attrition
+// Recorded leavers divided by all sampled employees in the selected cohort. Ignores outcome filters; not annual turnover.
+// Format: 0.0%;-0.0%;0.0%
+Attrition Rate =
+    DIVIDE([Employees Left], CALCULATE([Total Employees], REMOVEFILTERS('WA_Fn-UseC_-HR-Employee-Attrition'[Attrition], 'WA_Fn-UseC_-HR-Employee-Attrition'[Attrition Status])))
+
+// 02 Attrition
+// Recorded stayers divided by all sampled employees in the selected cohort. Ignores outcome filters; not period retention.
+// Format: 0.0%;-0.0%;0.0%
+Retained Share =
+    DIVIDE([Retained Employees], CALCULATE([Total Employees], REMOVEFILTERS('WA_Fn-UseC_-HR-Employee-Attrition'[Attrition], 'WA_Fn-UseC_-HR-Employee-Attrition'[Attrition Status])))
+
+// 01 Workforce
+// Mean age of sampled employees in current filter context.
+// Format: 0.0
+Average Employee Age =
+    AVERAGE('WA_Fn-UseC_-HR-Employee-Attrition'[Age])
+
+// 01 Workforce
+// Mean years at the company in the current filter context.
+// Format: 0.0
+Average Tenure =
+    AVERAGE('WA_Fn-UseC_-HR-Employee-Attrition'[YearsAtCompany])
+
+// 01 Workforce
+// Mean total working years across the selected sampled employees.
+// Format: 0.0
+Average Working Experience =
+    AVERAGE('WA_Fn-UseC_-HR-Employee-Attrition'[TotalWorkingYears])
+
+// 03 Compensation
+// Mean monthly income in original dataset units. No currency is assumed.
+// Format: #,0.00
+Average Monthly Income =
+    AVERAGE('WA_Fn-UseC_-HR-Employee-Attrition'[MonthlyIncome])
+
+// 03 Compensation
+// Median monthly income in original dataset units. No currency is assumed.
+// Format: #,0.00
+Median Monthly Income =
+    MEDIAN('WA_Fn-UseC_-HR-Employee-Attrition'[MonthlyIncome])
+
+// 03 Compensation
+// Mean monthly income among recorded leavers in the selected cohort; ignores outcome filters.
+// Format: #,0.00
+Average Income of Leavers =
+    CALCULATE([Average Monthly Income], REMOVEFILTERS('WA_Fn-UseC_-HR-Employee-Attrition'[Attrition Status]), 'WA_Fn-UseC_-HR-Employee-Attrition'[Attrition] = "Yes")
+
+// 03 Compensation
+// Mean monthly income among recorded stayers in the selected cohort; ignores outcome filters.
+// Format: #,0.00
+Average Income of Retained =
+    CALCULATE([Average Monthly Income], REMOVEFILTERS('WA_Fn-UseC_-HR-Employee-Attrition'[Attrition Status]), 'WA_Fn-UseC_-HR-Employee-Attrition'[Attrition] = "No")
+
+// 01 Workforce
+// Number of records marked Female, intersecting the current filter context.
+// Format: #,0
+Female Employees =
+    COALESCE(CALCULATE([Total Employees], KEEPFILTERS('WA_Fn-UseC_-HR-Employee-Attrition'[Gender] = "Female")), 0)
+
+// 01 Workforce
+// Share of selected sampled employees recorded as Female.
+// Format: 0.0%;-0.0%;0.0%
+Female Representation =
+    DIVIDE([Female Employees], [Total Employees])
+
+// 04 Employee experience
+// Number of selected sampled employees recorded as working overtime.
+// Format: #,0
+Overtime Employees =
+    COALESCE(CALCULATE([Total Employees], KEEPFILTERS('WA_Fn-UseC_-HR-Employee-Attrition'[OverTime] = "Yes")), 0)
+
+// 04 Employee experience
+// Share of selected sampled employees recorded as working overtime.
+// Format: 0.0%;-0.0%;0.0%
+Overtime Share =
+    DIVIDE([Overtime Employees], [Total Employees])
+
+// 02 Attrition
+// Sample attrition rate among overtime employees. Fixes the OverTime group; preserves other filters. Association only.
+// Format: 0.0%;-0.0%;0.0%
+Overtime Attrition Rate =
+    CALCULATE([Attrition Rate], 'WA_Fn-UseC_-HR-Employee-Attrition'[OverTime] = "Yes")
+
+// 02 Attrition
+// Sample attrition rate among employees without overtime. Fixes the OverTime group; preserves other filters.
+// Format: 0.0%;-0.0%;0.0%
+No Overtime Attrition Rate =
+    CALCULATE([Attrition Rate], 'WA_Fn-UseC_-HR-Employee-Attrition'[OverTime] = "No")
+
+// 02 Attrition
+// Overtime sample attrition rate minus no-overtime rate, in percentage points. Describes association, not causal impact.
+// Format: 0.0 "pp";-0.0 "pp";0.0 "pp"
+Overtime Attrition Gap pp =
+    IF(NOT ISBLANK([Overtime Attrition Rate]) && NOT ISBLANK([No Overtime Attrition Rate]), ([Overtime Attrition Rate] - [No Overtime Attrition Rate]) * 100)
+
+// 04 Employee experience
+// Mean job satisfaction index on the ordered 1-4 scale: Low, Medium, High, Very High. Not a percent.
+// Format: 0.0
+Average Satisfaction Score =
+    AVERAGE('WA_Fn-UseC_-HR-Employee-Attrition'[JobSatisfaction])
+
+// 04 Employee experience
+// Selected sampled employees with job satisfaction rating 1 or 2.
+// Format: #,0
+Low Satisfaction Employees =
+    COALESCE(CALCULATE([Total Employees], KEEPFILTERS('WA_Fn-UseC_-HR-Employee-Attrition'[JobSatisfaction] <= 2)), 0)
+
+// 04 Employee experience
+// Share of selected employees with job satisfaction rating 1 or 2.
+// Format: 0.0%;-0.0%;0.0%
+Low Satisfaction Share =
+    DIVIDE([Low Satisfaction Employees], [Total Employees])
+
+// 02 Attrition
+// Sample attrition rate within job satisfaction ratings 1 or 2, intersecting other filters.
+// Format: 0.0%;-0.0%;0.0%
+Low Satisfaction Attrition Rate =
+    CALCULATE([Attrition Rate], KEEPFILTERS('WA_Fn-UseC_-HR-Employee-Attrition'[JobSatisfaction] <= 2))
+
+// 04 Employee experience
+// Mean work-life balance index on the ordered 1-4 scale: Bad, Good, Better, Best.
+// Format: 0.0
+Average Work Life Balance Score =
+    AVERAGE('WA_Fn-UseC_-HR-Employee-Attrition'[WorkLifeBalance])
+
+// 04 Employee experience
+// Share with favorable work-life balance: ratings 3-4 (Better or Best).
+// Format: 0.0%;-0.0%;0.0%
+Good Work Life Balance Share =
+    DIVIDE(COALESCE(CALCULATE([Total Employees], KEEPFILTERS('WA_Fn-UseC_-HR-Employee-Attrition'[WorkLifeBalance] >= 3)), 0), [Total Employees])
+
+// 04 Employee experience
+// Mean environment satisfaction index on the ordered 1-4 scale.
+// Format: 0.0
+Average Environment Satisfaction =
+    AVERAGE('WA_Fn-UseC_-HR-Employee-Attrition'[EnvironmentSatisfaction])
+
+// 04 Employee experience
+// Share with environment satisfaction rating 1 or 2.
+// Format: 0.0%;-0.0%;0.0%
+Low Environment Satisfaction Share =
+    DIVIDE(COALESCE(CALCULATE([Total Employees], KEEPFILTERS('WA_Fn-UseC_-HR-Employee-Attrition'[EnvironmentSatisfaction] <= 2)), 0), [Total Employees])
+
+// 04 Employee experience
+// Mean relationship satisfaction index on the ordered 1-4 scale.
+// Format: 0.0
+Average Relationship Satisfaction =
+    AVERAGE('WA_Fn-UseC_-HR-Employee-Attrition'[RelationshipSatisfaction])
+
+// 05 Development
+// Mean recorded training count last year. The dataset supplies no calendar year.
+// Format: 0.0
+Average Training Sessions =
+    AVERAGE('WA_Fn-UseC_-HR-Employee-Attrition'[TrainingTimesLastYear])
+
+// 05 Development
+// Share of selected employees with zero recorded training sessions last year.
+// Format: 0.0%;-0.0%;0.0%
+No Training Share =
+    DIVIDE(COALESCE(CALCULATE([Total Employees], KEEPFILTERS('WA_Fn-UseC_-HR-Employee-Attrition'[TrainingTimesLastYear] = 0)), 0), [Total Employees])
+
+// 05 Development
+// Mean recorded years since last promotion; no promotion date or eligibility is supplied.
+// Format: 0.0
+Average Years Since Promotion =
+    AVERAGE('WA_Fn-UseC_-HR-Employee-Attrition'[YearsSinceLastPromotion])
+
+// 05 Development
+// Share of selected sampled employees with at least five recorded years since last promotion. Does not imply overdue promotion.
+// Format: 0.0%;-0.0%;0.0%
+Five Plus Years Since Promotion Share =
+    DIVIDE(COALESCE(CALCULATE([Total Employees], KEEPFILTERS('WA_Fn-UseC_-HR-Employee-Attrition'[YearsSinceLastPromotion] >= 5)), 0), [Total Employees])
+
+// 05 Development
+// Mean recorded years in current role.
+// Format: 0.0
+Average Years In Role =
+    AVERAGE('WA_Fn-UseC_-HR-Employee-Attrition'[YearsInCurrentRole])
+
+// 05 Development
+// Mean recorded years with current manager.
+// Format: 0.0
+Average Years With Manager =
+    AVERAGE('WA_Fn-UseC_-HR-Employee-Attrition'[YearsWithCurrManager])
+
+// 01 Workforce
+// Mean distance from home in the original dataset units; no unit is inferred.
+// Format: 0.0
+Average Distance From Home =
+    AVERAGE('WA_Fn-UseC_-HR-Employee-Attrition'[DistanceFromHome])
+
+// 03 Compensation
+// Mean recorded percentage salary hike; the dataset provides no effective date.
+// Format: 0.0%;-0.0%;0.0%
+Average Salary Hike =
+    DIVIDE(AVERAGE('WA_Fn-UseC_-HR-Employee-Attrition'[PercentSalaryHike]), 100)
+
+// 04 Employee experience
+// Share with job involvement rated High or Very High (ratings 3-4).
+// Format: 0.0%;-0.0%;0.0%
+High Job Involvement Share =
+    DIVIDE(COALESCE(CALCULATE([Total Employees], KEEPFILTERS('WA_Fn-UseC_-HR-Employee-Attrition'[JobInvolvement] >= 3)), 0), [Total Employees])
+
+// 01 Workforce
+// Share with recorded company tenure of zero or one year; not a calendar-year hiring rate.
+// Format: 0.0%;-0.0%;0.0%
+Early Tenure Share =
+    DIVIDE(COALESCE(CALCULATE([Total Employees], KEEPFILTERS('WA_Fn-UseC_-HR-Employee-Attrition'[YearsAtCompany] <= 1)), 0), [Total Employees])
+
+// 02 Attrition
+// Mean recorded age among leavers in the selected cohort. Ignores outcome filters.
+// Format: 0.0
+Average Age of Leavers =
+    CALCULATE([Average Employee Age], REMOVEFILTERS('WA_Fn-UseC_-HR-Employee-Attrition'[Attrition Status]), 'WA_Fn-UseC_-HR-Employee-Attrition'[Attrition] = "Yes")
+
+// 02 Attrition
+// Mean recorded years at company among leavers in the selected cohort. Ignores outcome filters.
+// Format: 0.0
+Average Tenure of Leavers =
+    CALCULATE([Average Tenure], REMOVEFILTERS('WA_Fn-UseC_-HR-Employee-Attrition'[Attrition Status]), 'WA_Fn-UseC_-HR-Employee-Attrition'[Attrition] = "Yes")
+
